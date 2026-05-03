@@ -1,6 +1,6 @@
-# URL-Based Attack Identification on IP Data
+# 🐄 CattleBreed AI — Intelligent Livestock Breed Recognition System
 
-> A full-stack, AI-augmented cybersecurity platform for real-time detection, classification, and analysis of URL-based web attacks using hybrid machine learning and pattern-matching techniques.
+> **An AI-powered web platform for real-time Indian cattle and buffalo breed identification using Google Gemini Vision API and a custom TensorFlow deep learning model — built for farmers, researchers, and livestock management professionals.**
 
 ---
 
@@ -27,32 +27,34 @@
 
 ## Introduction
 
-Web application attacks launched through maliciously crafted URLs represent one of the most pervasive threat vectors in modern cybersecurity. Attackers exploit URL parameters and query strings to execute SQL injections, cross-site scripting, command injections, server-side request forgeries, and a range of other critical attack categories—often bypassing conventional firewall rules that lack deep URL inspection.
+CattleBreed AI is a full-stack intelligent web application designed to automate the identification and classification of Indian cattle and buffalo breeds from photographic images. The system addresses a significant gap in modern livestock management: the inability to quickly and accurately identify animal breeds without expert veterinary involvement.
 
-This project addresses that gap by providing a production-grade, full-stack intrusion detection platform that analyzes URLs in real time using a **hybrid detection engine** combining regex-based pattern recognition with a trained **machine learning classifier**. An integrated **AI explainer** powered by a local language model (TinyLlama via Ollama) generates natural-language explanations of detected threats, enabling security analysts to understand attack intent without requiring deep expertise in attack taxonomy.
+India hosts one of the largest bovine populations in the world, encompassing numerous indigenous breeds — such as Gir, Sahiwal, and Red Sindhi — each carrying distinct agronomic traits including milk yield, disease resistance, and climate adaptability. Misidentification of these breeds leads to suboptimal breeding decisions, reduced productivity, and loss of genetic heritage. CattleBreed AI solves this by combining the power of Google Gemini Vision (generative AI) with a locally trained TensorFlow SavedModel, delivering instant, confidence-scored breed predictions through an intuitive web interface.
 
-The system supports both **manual URL submission** and **automated network traffic analysis** via PCAP file ingestion, making it suitable for both interactive investigation and batch forensic workflows. Detection records are persisted in a dual-storage architecture—SQLite for structured querying and Google Firestore for real-time cross-session synchronization—and are accessible through a React-based dashboard with visualization, filtering, and export capabilities.
+The platform is designed for two primary user categories: farmers and livestock owners who need rapid breed identification in the field, and administrators who oversee breed data, user activity, and AI model validation.
 
 ---
 
 ## Objectives
 
-- Design and implement a hybrid URL attack detection engine combining regex pattern matching with a TF-IDF + Logistic Regression machine learning pipeline.
-- Support detection of eleven distinct URL-based attack categories including SQL Injection, XSS, Command Injection, SSRF, LFI/RFI, Directory Traversal, XXE, Web Shell Upload, HTTP Parameter Pollution, Brute Force, and Typosquatting.
-- Build a RESTful Flask API backend with Firebase Authentication for secure, per-user detection history and session management.
-- Develop a React.js frontend with OTP-based signup verification, a real-time analytics dashboard, and integrated export functionality.
-- Implement PCAP network capture file analysis using PyShark to support offline and forensic threat investigation workflows.
-- Integrate a locally hosted LLM (TinyLlama via Ollama) to generate concise, actionable AI explanations for detected attack types.
-- Persist detection records in both SQLite (structured queries) and Google Cloud Firestore (real-time synchronization), providing redundancy and multi-client consistency.
-- Enable filtered data export in CSV and JSON formats for integration with external SIEM or reporting tools.
+- Develop an end-to-end web application capable of identifying six major Indian cattle and buffalo breeds from user-submitted images.
+- Integrate Google Gemini Vision API (`gemini-2.5-flash`) as the primary AI inference engine with structured JSON response parsing.
+- Build and deploy a custom TensorFlow SavedModel as a secondary/offline inference fallback.
+- Implement a role-based access control system differentiating farmers/users from administrators.
+- Provide each user with a comprehensive personal dashboard featuring weekly, monthly, and yearly scan analytics.
+- Maintain a persistent scan history with filterable views and downloadable individual scan reports.
+- Enable administrators to manage the breed database, validate AI-generated dataset images, and monitor platform-wide usage analytics.
+- Implement secure email-based OTP verification for all new user registrations.
+- Generate PDF-based livestock statistical reports using ReportLab.
+- Deliver a notification system that alerts users upon completion of each breed recognition scan.
 
 ---
 
 ## Summary
 
-The system operates as a two-tier application: a **Python/Flask backend** that houses the detection logic, machine learning model, and all API routes, and a **React.js frontend** that provides the user interface for authentication, URL analysis, dashboard visualization, PCAP upload, and data export.
+CattleBreed AI is a Django-based multi-app web platform that accepts cattle and buffalo images from authenticated users and returns an AI-generated breed classification with a confidence score. The recognition pipeline first invokes the Google Gemini Vision API; if that fails, it falls back to a locally deployed TensorFlow SavedModel trained on six breed categories. Each scan result is stored in the database, linked to the user profile, and immediately reflected in the user's analytics dashboard.
 
-Upon submission of a URL—either manually or extracted from a PCAP capture—the backend first checks both Firestore and SQLite for a previous analysis of that URL by the authenticated user. If no prior record exists, the URL is passed to the `URLAttackDetector`, which applies eleven families of compiled regular expressions against the URL-decoded string. The result is then cross-referenced with the ML model's prediction; if the model returns a non-safe label with confidence above 0.75, the ML result is merged into the detection output. A severity score (low / medium / high / critical) is computed from the highest-risk attack type detected. Confirmed malicious records are written to both SQLite and Firestore. Optionally, the user can trigger an AI explanation for any detected attack, which is generated by TinyLlama and stored alongside the detection record.
+The application is modularized into nine Django apps: `accounts`, `portal`, `recognition`, `breeds`, `history`, `reports`, `notifications`, and `profiles`, each owning a discrete domain of the system. The admin panel provides real-time statistics, dataset review queues, user management, and global scan monitoring. The entire stack runs on Django with SQLite, is template-driven using Bootstrap 5, and is deployable via standard WSGI/ASGI servers.
 
 ---
 
@@ -60,376 +62,351 @@ Upon submission of a URL—either manually or extracted from a PCAP capture—th
 
 ### Before Login (Public Access)
 
-- **Landing Page** — Informational overview of the platform's capabilities with a call-to-action for signup.
-- **Signup with OTP Verification** — New users register with username, email, and password. A one-time password is generated server-side and must be verified before the account is activated.
-- **Login** — Credential-based authentication with Firebase token issuance; session state maintained via Authorization Bearer headers.
-- **Forgot / Reset Password** — Firebase-backed password reset link generation for self-service account recovery.
+- **Landing Page** — A publicly accessible marketing/informational landing page introducing the platform, its capabilities, and a call-to-action to register or log in.
+- **User Registration** — Email-based account creation with role selection (Farmer/Administrator). Registration triggers OTP delivery via SMTP for email verification.
+- **OTP Verification** — Time-bound (10-minute) six-digit OTP verification step before account activation.
+- **Login & Role-Based Routing** — Credential-based login that redirects farmers to the user dashboard and administrators to the admin control panel.
+- **Password Reset** — Full Django built-in password reset flow via email.
 
-### After Login (Authenticated Access)
+### After Login — Farmer/User Portal
 
-- **URL Analyzer** — Submit any URL for immediate hybrid analysis. Results display the detected attack type, severity level, confidence score, matched pattern, HTTP response code, and a timestamp. Users may request an AI-generated explanation for each detection.
-- **Dashboard** — Real-time statistics panel showing total detections, attack-type distribution via Pie chart, severity breakdown, weighted malicious rate, and a table of the five most recent unique detections.
-- **Attack History** — Paginated, filterable view of all malicious URLs detected by the authenticated user, sourced from Firestore with client-side deduplication by URL.
-- **PCAP File Analysis** — Upload `.pcap` or `.txt` network capture files for batch URL extraction and attack analysis. Results include per-file summaries (file size, total URLs extracted, malicious count, processing time) and per-attack breakdown by type.
-- **Data Export** — Download detection records as CSV or JSON, with optional filtering by attack type and severity level.
+- **User Dashboard** — Personalized analytics hub displaying total scans, average AI confidence score, success rate, unique breeds identified, and a cattle-vs-buffalo distribution chart. Includes weekly (7-day bar), monthly (4-week), and yearly (12-month) activity visualizations.
+- **AI Lens (Breed Recognition)** — Image upload interface where users submit cattle photos for instant AI-powered breed identification. Displays breed name, category (Cattle/Buffalo), and confidence percentage on the result page.
+- **Scan History** — Chronological list of all past scans with filter options for high-confidence (≥90%) and low-confidence (<70%) results. Each entry links to a detailed scan view.
+- **Scan Detail View** — Displays scan image, breed name, confidence score, AI source, processing time, and a derived health/quality status label (Excellent / Good / Moderate / Needs Review).
+- **Download Scan Report** — Per-scan downloadable plain-text report containing breed name, category, confidence score, health status, and scan timestamp.
+- **Breed Encyclopedia** — Searchable and category-filterable directory of all active breed entries. Each breed page shows description, origin, milk yield, milk fat percentage, coat color, traits list, and an optional video reference link.
+- **Statistical Reports** — A dedicated reports dashboard with breed-distribution pie chart and monthly scan bar chart rendered via Chart.js, plus a one-click PDF export generated by ReportLab.
+- **Notifications** — In-app notification feed that automatically creates an entry upon each completed recognition scan. Supports notification types: success, info, warning, and feature.
+- **Profile Management** — Editable user profile page with full name, phone number, farm location, bio, and avatar upload.
+
+### After Login — Administrator Panel
+
+- **Admin Dashboard** — System-wide overview displaying total registered users, total scans platform-wide, total breed entries, system status, model version, and a feed of the most recent scans.
+- **Breed Management** — Full CRUD interface for the breed database: add, edit, delete, and list all breed entries. Each form supports thumbnail upload, production metric fields, trait tags, and optional video URL.
+- **Analytics Panel** — Breed-level scan distribution visualization with a table of recent unvalidated scans and dataset counters (total, validated, pending).
+- **Dataset Review Queue** — Lists all unvalidated scan images for human review. Admin can validate (approve for training use) or discard individual entries.
+- **User Directory with Status Toggle** — Displays all users with activation status. Admins can activate or deactivate any non-superuser account.
+- **AI Monitor** — Dedicated view for monitoring AI inference activity.
+- **Bulk Upload Interface** — Supports bulk addition of training images to the dataset.
 
 ---
 
 ## Technologies Used
 
 ### Programming Languages
-- Python 3.x
-- JavaScript (ES2022)
+- Python 3.10
 
 ### Libraries & Frameworks
-- Flask, Flask-CORS — REST API server and cross-origin support
-- React.js 19 — Component-based frontend SPA
-- React Router DOM 7 — Client-side routing
-- Bootstrap 5 — Responsive UI layout
-- Chart.js / react-chartjs-2 — Dashboard data visualization
-- Lucide React, React Icons — Icon sets
-- Werkzeug — Password hashing utilities
+- Django 4.x — Core web framework, ORM, URL routing, middleware, admin
+- django-crispy-forms + crispy-bootstrap5 — Form rendering with Bootstrap 5 styling
+- Pillow (PIL) — Server-side image loading, conversion, and preprocessing
+- python-dotenv — Environment variable management from `.env` file
+- ReportLab — Programmatic PDF generation for livestock statistical reports
 
 ### Machine Learning / AI
-- scikit-learn — TF-IDF Vectorizer (character n-grams, range 2–5) + Logistic Regression pipeline
-- joblib — Model serialization and deserialization
-- pandas — Dataset loading and preprocessing
-- TinyLlama (via Ollama) — Local LLM for natural-language attack explanation generation
+- TensorFlow 2.x (SavedModel format) — Custom-trained deep learning model for cattle breed classification
+- Google Generative AI SDK (`google-generativeai`) — Python client for Gemini Vision API (`gemini-2.5-flash`)
+- NumPy — Numerical operations for image array preprocessing and argmax prediction extraction
 
-### Backend
-- Flask REST API with Bearer token authentication
-- PyShark — PCAP file parsing and HTTP packet extraction
-- requests — Live HTTP response code verification
-
-### Frontend
-- React.js with functional components and React Hooks
-- Firebase SDK (v12) — Authentication token management
-- Axios-style `authFetch` wrapper — Automatic Authorization header injection
+### Backend / Frontend
+- Django template engine — HTML rendering with Jinja-style template inheritance
+- Bootstrap 5 — Responsive UI framework across all portal and admin templates
+- Chart.js — Client-side rendering of pie charts and bar charts in dashboards and reports
+- CSRF middleware, SecurityMiddleware, ClickjackingMiddleware — Django's built-in security stack
 
 ### Database
-- SQLite 3 (WAL mode) — Structured, per-user attack persistence with indexing
-- Google Cloud Firestore — Real-time, cross-session attack history and statistics
+- SQLite3 — Default relational database for development (configurable for PostgreSQL in production)
 
 ### Deployment & DevOps
-- Node.js / npm — Frontend build tooling
-- Python `venv` — Isolated backend environment
-- Proxy configuration — React dev server proxied to Flask at `localhost:5000`
+- Django WSGI (`core/wsgi.py`) and ASGI (`core/asgi.py`) — Production server interface support
+- `manage.py` — Django management command entry point
+- `populate_data.py` / `populate_admin.py` — Seed scripts for initial breed and admin data population
 
 ### Security
-- Firebase Authentication — Token-based identity and session management
-- OTP-based account verification — Server-generated 6-digit codes on signup
-- `require_auth` decorator — Protects all sensitive API routes via Bearer token validation
-- Per-user data isolation — All database queries scoped to authenticated `uid`
-- Duplicate detection suppression — Prevents reanalysis and double-counting of known URLs
+- Custom `AbstractUser` model with email as the primary identifier (username removed)
+- Email OTP verification for new account activation
+- Role-based access decorators (`@login_required`, `@staff_member_required`, `@user_passes_test`)
+- Django CSRF protection on all POST endpoints
+- Session-based OTP state management (`request.session['verify_user']`)
+- SMTP email backend for transactional mail (OTP delivery, password reset)
+- Environment variable isolation of API keys and credentials via `.env`
 
 ---
 
 ## Dataset
 
-**Source:** Synthetically generated using the included `dataset_generator.py` module; a pre-generated snapshot is provided as `backend/dataset.csv`.
+### Source
+The system is trained to recognize six breed categories representing both indigenous Indian and commercially significant bovine breeds: Gir, Sahiwal, Red Sindhi, Murrah Buffalo, Jersey, and Holstein Friesian. Training images were sourced from publicly available livestock databases and curated domain-specific image collections.
 
-**Structure:** Each record contains two fields — `url` (a string containing a crafted or benign URL path) and `attack_type` (the corresponding label from the set of supported attack categories).
+### Structure
+Images are stored in the `ml_models/cattle_saved_model/` directory as a TensorFlow SavedModel, with a `serving_default` signature used for inference. Dataset images for ongoing retraining are stored in the database under `DatasetImage` records (linked to individual breed entries) and uploaded to `media/dataset/training/`.
 
-**Attack Categories in Dataset:** `sql_injection`, `xss`, `directory_traversal`, `command_injection`, `ssrf`, `lfi`, `rfi`, `credential_stuffing`, `typosquatting`, `http_parameter_pollution`, `xxe`, `web_shell`, `brute_force`, and `safe`.
+### Preprocessing
+Each input image undergoes the following preprocessing pipeline before inference:
+- Conversion to RGB color mode (strips alpha channels and handles grayscale inputs)
+- Resizing to 224×224 pixels (standard input resolution for the model)
+- Normalization to the [0.0, 1.0] floating-point range by dividing pixel values by 255
+- Expansion of the array along axis 0 to produce a batch dimension of shape `(1, 224, 224, 3)`
 
-**Preprocessing:** The dataset is loaded via pandas with `on_bad_lines="skip"` to handle malformed rows. No explicit train/test split is performed in the current pipeline; the full dataset trains the model. URLs are the sole feature; labels are the target variable.
-
-**Usage:** The dataset is consumed by `ml_model.py` during training. The trained model is serialized to `url_model.pkl` and loaded once at server startup for low-latency inference.
+### Usage
+The preprocessed NumPy array is passed to the TensorFlow `serving_default` inference function. The output tensor is converted to a NumPy array, and `argmax` identifies the predicted class index. The confidence score is derived as `predictions[idx] * 100`, rounded to two decimal places. An `ai_source` field on each scan record tracks whether the result originated from Gemini or the local model.
 
 ---
 
 ## System Architecture
 
+The application follows a modular monolithic architecture with clear separation of concerns across nine Django applications, each responsible for a distinct business domain.
+
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        React.js Frontend                        │
-│  Landing │ Auth Pages │ Dashboard │ Analyzer │ PCAP │ Export    │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │ HTTP (Bearer Token)
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     Flask REST API (main.py)                    │
-│                                                                 │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
-│  │ Auth Routes  │  │ Analyze Route│  │  PCAP Upload Route   │  │
-│  │ /signup      │  │ /api/analyze │  │  /api/upload-pcap    │  │
-│  │ /login       │  │              │  │                      │  │
-│  │ /verify-otp  │  └──────┬───────┘  └──────────┬───────────┘  │
-│  └──────────────┘         │                     │              │
-│                           ▼                     ▼              │
-│              ┌────────────────────────────────────┐            │
-│              │       URLAttackDetector             │            │
-│              │  (Regex Engine + ML Pipeline)       │            │
-│              └──────────────┬─────────────────────┘            │
-│                             │                                   │
-│              ┌──────────────▼─────────────────────┐            │
-│              │       AI Explainer (TinyLlama)      │            │
-│              └──────────────┬─────────────────────┘            │
-│                             │                                   │
-│         ┌───────────────────▼───────────────────┐              │
-│         │          AttackDatabase (SQLite)       │              │
-│         └───────────────────────────────────────┘              │
-│                             │                                   │
-│         ┌───────────────────▼───────────────────┐              │
-│         │        Google Cloud Firestore          │              │
-│         └───────────────────────────────────────┘              │
-└─────────────────────────────────────────────────────────────────┘
+CattleBreed AI
+│
+├── core/                  → Project settings, root URL configuration, WSGI/ASGI entry points
+├── accounts/              → Custom User model (email-based), OTP logic, signup, login, logout
+├── portal/                → Landing page, user dashboard, admin dashboard, dataset validation
+├── recognition/           → Image upload view, Gemini AI integration, ML inference engine, BreedScan model
+├── breeds/                → Breed database model, CRUD views, breed directory for users
+├── history/               → Scan history views (list, detail, delete), per-scan report download
+├── reports/               → Statistical report dashboard, Chart.js data APIs, PDF export via ReportLab
+├── notifications/         → Notification model, context processor for unread count, list view
+├── profiles/              → User profile model (farm info, bio, avatar), profile edit/view
+│
+├── ml_models/
+│   └── cattle_saved_model/ → Trained TensorFlow SavedModel for offline breed inference
+│
+└── templates/             → Django HTML templates organized per application
 ```
 
-**Data Flow:**
-1. The React frontend authenticates via Firebase and attaches an ID token to every API request.
-2. The Flask backend validates the token using `firebase_admin.auth.verify_id_token`.
-3. For a URL analysis request, the backend checks SQLite and Firestore for a prior record. If none exists, the URL is passed through the hybrid detection engine.
-4. Detected attacks are persisted in both SQLite (indexed, filterable) and Firestore (real-time, cross-client).
-5. Statistics and history are served from Firestore; export data originates from SQLite.
+**Data Flow:** A user submits an image through the upload form → `recognition/views.py` opens the image via Pillow → the Gemini Vision API is called with a structured prompt → the JSON response is parsed into breed name, type, and confidence → a `BreedScan` record is created and linked to the user → a `Notification` record is created → the result is rendered to the template. All analytics views query the `BreedScan` table using Django ORM aggregation functions.
 
 ---
 
 ## Model Workflow
 
-### 1. Preprocessing
-- Raw URLs are loaded from `dataset.csv` using pandas.
-- The `TfidfVectorizer` is configured with `analyzer="char"` and `ngram_range=(2, 5)`, converting each URL into a sparse matrix of character-level bi-gram through 5-gram TF-IDF features.
-- This character-level approach is deliberately chosen to capture obfuscated attack strings (e.g., URL-encoded payloads, typosquatted domains) that word-level tokenization would miss.
+### Step 1 — Preprocessing
+The uploaded image file from the multipart form submission is opened using `PIL.Image.open()` and converted to RGB. For the local TensorFlow model, the image is resized to `(224, 224)` and normalized to float32 in `[0.0, 1.0]`. A batch dimension is added with `np.expand_dims`.
 
-### 2. Training
-- A `sklearn.pipeline.Pipeline` chains the TF-IDF vectorizer with a `LogisticRegression` classifier (`max_iter=1000`).
-- The pipeline is fitted on the full labeled dataset and serialized to `url_model.pkl` using joblib.
+### Step 2 — Training
+The TensorFlow model was trained offline on categorized cattle and buffalo images across six breed classes. The trained model was exported in TensorFlow's `SavedModel` format and stored in `ml_models/cattle_saved_model/`. The model exposes a `serving_default` signature compatible with `tf.saved_model.load()` and `.signatures["serving_default"]`.
 
-### 3. Evaluation
-- `model.predict_proba()` is used at inference time to retrieve class probabilities; the maximum probability across all classes is reported as the confidence score.
-- An ML prediction is only acted upon if the predicted label is not `"safe"` or `"none"` and the confidence exceeds **0.75**, preventing low-confidence false positives from polluting the detection record.
+### Step 3 — Evaluation
+Model performance was evaluated using classification accuracy across the six breed classes. The confidence score produced during inference serves as a live quality indicator: scores ≥90% are labeled "Excellent", 75–89% as "Good", 60–74% as "Moderate", and below 60% as "Needs Review".
 
-### 4. Prediction
-- At request time, `predict_url(url)` loads the pre-serialized model (loaded once at startup) and returns a `(label, confidence)` tuple.
-- If the regex engine has already flagged the same attack type, the ML confidence is merged into the existing detection entry by taking the maximum of the two confidence values.
+### Step 4 — Prediction
+For every submitted image, the primary inference path calls `analyze_with_gemini()` in `recognition/gemini_service.py`. The Gemini `gemini-2.5-flash` model receives the PIL image and a structured prompt instructing it to return ONLY a JSON object containing `breed`, `type`, and `confidence`. The response text is searched with a regex pattern to extract the JSON block, which is then parsed and validated. If the Gemini call fails or returns no valid data, the local TensorFlow model is invoked via `predict_with_local_model()` in `recognition/ml_engine.py` as a fallback.
 
-### 5. Integration
-- The hybrid result is assembled in `URLAttackDetector.analyze_url()`, which returns a structured dictionary containing `is_malicious`, `attacks_detected` (list), `primary_attack_type`, `severity`, and `confidence`.
-- This result drives both the API response payload and the database insert logic.
+### Step 5 — Integration
+The prediction result dictionary (`breed`, `type`, `confidence`) is persisted as a `BreedScan` record in the database with user association, image file path, AI source identifier, and millisecond-precision processing time. The result is immediately surfaced to the user in the recognition result template, logged in scan history, and reflected in all dashboard analytics.
 
 ---
 
 ## Implementation Details
 
-**Backend (`backend/`):**
+**Custom User Authentication:** The default Django `User` model was replaced with a custom `AbstractUser` subclass that uses email as the primary login identifier (username field removed). Users are assigned one of two roles: `farmer` or `admin`. On login, role-based redirection routes farmers to the user portal and admins to the admin dashboard.
 
-`main.py` is the Flask application entry point. It defines all API routes, initializes Flask-CORS for the React frontend origin, instantiates the `URLAttackDetector`, `AttackDatabase`, and `AttackDatasetGenerator`, and configures Firebase Admin SDK from an environment-variable-specified service account path. The `require_auth` decorator intercepts every protected route, validates the Bearer token, and attaches the decoded user payload to `request.user`.
+**Email OTP Registration:** On signup, the user account is created with `is_active=False`. A six-digit OTP is generated using Python's `random.randint`, stored in the `EmailOTP` model with a creation timestamp, and dispatched via Django's SMTP backend. The user must submit the correct OTP within a 10-minute expiry window. Upon verification, `is_active` and `is_verified` are set to `True` and the OTP record is deleted.
 
-`attack_detector.py` implements `URLAttackDetector`, which maintains compiled regex patterns for all eleven attack families. The `detect_pattern` method URL-decodes and lowercases the input before applying each pattern, ensuring robustness against common encoding-based evasion. `calculate_severity` maps attack types to integer weights and returns a four-level severity label.
+**Dual AI Inference Strategy:** The recognition module implements a try/except chain: Gemini Vision is attempted first (primary), and the TensorFlow SavedModel is available as a secondary path. Thread-safe lazy loading of the TensorFlow model is implemented using a module-level `threading.Lock`, ensuring the model is loaded only once regardless of concurrent requests.
 
-`ml_model.py` defines the sklearn pipeline and exposes `predict_url()`. The model file is loaded at module import time so that inference incurs no disk I/O overhead per request.
+**Dashboard Analytics:** The user dashboard computes weekly, monthly, and yearly scan activity using Django ORM aggregation (`Count`, `Avg`) and date range filtering. Each activity period is normalized to a percentage of the maximum value for proportional bar chart rendering without a JavaScript charting library.
 
-`ai_explainer.py` generates structured explanations by submitting a carefully constrained prompt to a locally running Ollama instance at `http://localhost:11434/api/generate` using the `tinyllama` model. The prompt enforces a three-section format (why dangerous, impact, prevention) under 150 words, with temperature set to 0.2 for deterministic output.
+**Admin Dataset Validation:** Every `BreedScan` record carries an `is_validated` boolean flag (default: `False`). Admins can review unvalidated scan images in the Dataset Review Queue and either validate them (marking them suitable as training data) or discard them (deleting the record). This creates a human-in-the-loop pipeline for continuous model improvement.
 
-`database.py` implements `AttackDatabase`, which manages the SQLite schema including the `attacks` and `pcap_files` tables, all indexes, and safe schema migration via `ALTER TABLE` with exception suppression. Duplicate URL/attack-type combinations are handled via `INSERT OR IGNORE` + `UPDATE occurrence_count` logic to avoid data loss while preventing redundant records.
+**PDF Report Generation:** The reports module uses ReportLab's `canvas` API to dynamically generate an A4-format PDF containing the user's aggregated livestock statistics. The PDF is streamed directly as an `HttpResponse` with `Content-Disposition: attachment` to trigger a browser download.
 
-`pcap_analyzer.py` uses PyShark to capture HTTP-layer packets from PCAP files, reconstructing full URLs from `host` and `request_uri` fields. It also supports `.txt` files containing one URL per line for simulated batch testing without a full packet capture setup.
-
-**Frontend (`frontend/src/`):**
-
-`App.js` defines the route tree using React Router DOM v7. Public routes (Landing, Login, Signup, OTP, password reset) are rendered without the shared `Layout` wrapper. Protected routes (Dashboard, Analyze, Attacks, Export, PCAP) are nested under `Layout`, which renders the persistent navigation sidebar.
-
-`api.js` exports an `authFetch` wrapper that reads the Firebase ID token from the current user session and injects it as the `Authorization: Bearer <token>` header on every outbound API call.
-
-`Dashboard.jsx` fetches statistics from `/api/statistics` and history from `/api/history`, deduplicates attacks by URL on the client side, and renders a Pie chart of attack-type distribution using Chart.js with the `chartjs-plugin-datalabels` plugin.
-
-`Analyze.jsx` submits URL analysis requests, displays the structured detection result, and offers an inline "Get AI Explanation" action that calls `/api/explain` and renders the TinyLlama-generated text.
-
-`Pcap.jsx` manages PCAP file upload via multipart form POST to `/api/upload-pcap` and displays per-file analysis summaries in a tabular layout.
-
-`Export.jsx` builds query parameters for `/api/export` based on user-selected attack type and severity filters, triggering a browser file download of the resulting CSV or JSON.
+**Notification System:** A context processor (`notifications/context_processors.py`) is registered globally and injects the unread notification count into every request context for display in the navigation bar. Notifications are created programmatically at the point of scan completion.
 
 ---
 
 ## Results
 
-The system demonstrates effective detection across all eleven supported attack categories through the combined operation of the regex engine and ML classifier.
+The system achieved the following performance characteristics based on testing with the deployed dual-engine inference pipeline:
 
-**Hybrid Detection Engine:**
+| Metric | Value |
+|---|---|
+| Supported Breed Classes | 6 (Gir, Sahiwal, Red Sindhi, Murrah Buffalo, Jersey, Holstein Friesian) |
+| Primary AI Engine | Google Gemini Vision (`gemini-2.5-flash`) |
+| Fallback AI Engine | Custom TensorFlow SavedModel |
+| Image Input Resolution | 224 × 224 pixels (local model) |
+| Confidence Score Range | 0 – 100% |
+| High-Confidence Threshold | ≥ 90% (labeled "Excellent") |
+| AI Source Tracking | Per-scan field: `gemini` or `local` |
+| Processing Time Logging | Millisecond-precision per scan |
+| PDF Report Generation | ReportLab A4 format with summary statistics |
+| Dataset Validation Pipeline | Human-reviewed queue with approve/discard actions |
 
-| Attack Type              | Detection Method          | Severity |
-|--------------------------|---------------------------|----------|
-| SQL Injection            | Regex + ML                | Critical |
-| Command Injection        | Regex + ML                | Critical |
-| XXE                      | Regex + ML                | Critical |
-| Web Shell Upload         | Regex + ML                | Critical |
-| SSRF                     | Regex + ML                | High     |
-| LFI / RFI                | Regex + ML                | High     |
-| Directory Traversal      | Regex + ML                | Medium   |
-| XSS                      | Regex + ML                | Medium   |
-| Typosquatting            | Regex + ML                | Medium   |
-| Brute Force Attempt      | Regex + ML                | Low      |
-| HTTP Parameter Pollution | Regex + ML                | Low      |
-
-**ML Model Performance:**
-
-The Logistic Regression classifier trained on character-level TF-IDF features (bi-gram to 5-gram) achieves high precision on the synthetically generated dataset due to the discriminative nature of attack-specific character sequences. Key performance characteristics:
-
-- The model correctly differentiates obfuscated SQL injection payloads from benign query strings through n-gram overlap patterns.
-- Confidence thresholding at **0.75** minimizes false-positive escalations from the ML layer.
-- Regex detection operates with near-zero latency; ML inference adds approximately 5–15 ms per URL on commodity hardware.
-- AI explanation generation via TinyLlama typically completes within 5–10 seconds on local CPU inference.
-
-**Operational Behavior:**
-- Duplicate URL submissions by the same user are detected and returned from cache (SQLite or Firestore) without reprocessing.
-- PCAP batch analysis deduplicates URLs within a single file and suppresses URLs already present in the user's detection history.
-- Weighted malicious rate is computed as a severity-weighted ratio, assigning scores of 1.0 (critical), 0.75 (high), 0.5 (medium), and 0.25 (low) normalized against total detections.
+The Gemini Vision API consistently returns well-structured JSON with breed names and confidence scores for clearly visible cattle images. The local TensorFlow model serves as a reliable fallback, ensuring the system remains functional under API unavailability. Confidence scores below 70% trigger a "Needs Review" status, prompting users to submit a clearer image for improved accuracy.
 
 ---
 
 ## Installation
 
 ### Prerequisites
+- Python 3.10 or later
+- pip
+- Git
+- A valid Google Gemini API key (obtainable from [Google AI Studio](https://aistudio.google.com/))
+- SMTP email credentials for OTP delivery
 
-- Python 3.9 or higher
-- Node.js 18 or higher and npm
-- A Firebase project with Firestore enabled and a service account key JSON file
-- Ollama installed locally with the `tinyllama` model pulled (optional — required for AI explanation feature)
-
-### Backend Setup
+### Step 1 — Clone the Repository
 
 ```bash
-# Clone the repository
-git clone https://github.com/harisaigithub/Identification-of-url-based-attacks-on-IP-Data-React.git
-cd Identification-of-url-based-attacks-on-IP-Data-React
+git clone https://github.com/harisaigithub/CattleBreed2.git
+cd CattleBreed2
+```
 
-# Create and activate a virtual environment
+### Step 2 — Create and Activate a Virtual Environment
+
+```bash
 python -m venv venv
-source venv/bin/activate        # On Windows: venv\Scripts\activate
 
-# Install backend dependencies
-pip install -r requirements.txt
+# On Windows
+venv\Scripts\activate
 
-# Place your Firebase service account key in the backend directory
-cp /path/to/serviceAccountKey.json backend/serviceAccountKey.json
-
-# (Optional) Set the service account path via environment variable
-export FIREBASE_SERVICE_ACCOUNT=backend/serviceAccountKey.json
-
-# Train the ML model (if url_model.pkl is not present)
-cd backend
-python ml_model.py
-
-# Start the Flask API server
-python main.py --host 0.0.0.0 --port 5000
+# On macOS/Linux
+source venv/bin/activate
 ```
 
-### Frontend Setup
+### Step 3 — Install Dependencies
 
 ```bash
-# From the project root
-cd frontend
-
-# Install Node dependencies
-npm install
-
-# Start the React development server
-npm start
+pip install django pillow python-dotenv google-generativeai tensorflow numpy reportlab django-crispy-forms crispy-bootstrap5
 ```
 
-The React application will be available at `http://localhost:3000` and will proxy API calls to the Flask server at `http://localhost:5000`.
-
-### AI Explainer Setup (Optional)
+Or, if a `req.txt` / `requirements.txt` file is present:
 
 ```bash
-# Install Ollama (see https://ollama.com for platform-specific instructions)
-# Then pull the TinyLlama model
-ollama pull tinyllama
-
-# Start the Ollama server (runs on localhost:11434 by default)
-ollama serve
+pip install -r req.txt
 ```
 
-### Firebase Configuration
+### Step 4 — Configure Environment Variables
 
-Update `frontend/src/firebase.js` with your Firebase project credentials (API key, project ID, auth domain, etc.) before running the frontend.
+Create a `.env` file in the project root with the following contents:
+
+```env
+AI_API_KEY=your_google_gemini_api_key_here
+EMAIL_HOST_USER=your_email@gmail.com
+EMAIL_HOST_PASSWORD=your_app_password_here
+```
+
+> **Note:** Use a Gmail App Password (not your account password) when using Gmail as the SMTP provider. Enable 2FA on your Google account and generate an App Password from Account Settings.
+
+### Step 5 — Apply Database Migrations
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### Step 6 — Create a Superuser (Admin Account)
+
+```bash
+python manage.py createsuperuser
+```
+
+Follow the prompts to set the admin email and password.
+
+### Step 7 — Populate Seed Data (Optional)
+
+```bash
+python populate_data.py
+python populate_admin.py
+```
+
+### Step 8 — Collect Static Files (for Production)
+
+```bash
+python manage.py collectstatic
+```
+
+### Step 9 — Run the Development Server
+
+```bash
+python manage.py runserver
+```
+
+Access the application at `http://127.0.0.1:8000/`.
 
 ---
 
 ## Usage
 
-### User Registration and Login
+### As a Farmer/User
 
-1. Navigate to `http://localhost:3000` and click **Get Started**.
-2. Complete the signup form. An OTP will be logged server-side (console output); enter it on the OTP verification page.
-3. Log in with your registered credentials to receive a Firebase ID token.
+1. Navigate to `http://127.0.0.1:8000/` and click **Sign Up**.
+2. Enter your email address, choose the **Farmer** role, and set a password.
+3. Check your email inbox for the six-digit OTP and enter it on the verification page.
+4. After successful verification, log in to access your personal dashboard.
+5. Click **AI Lens** or navigate to `/recognition/` to upload a cattle or buffalo image.
+6. View the recognized breed name, type, and confidence score on the result page.
+7. Access **History** at `/history/` to review all past scans with filter options.
+8. Visit **Reports** at `/reports/` to view breed distribution charts and download a PDF livestock report.
+9. Click the **bell icon** to review recognition notifications.
+10. Edit your profile at `/profiles/` to add farm location and personal details.
 
-### Analyzing a URL
+### As an Administrator
 
-1. Navigate to the **Analyze** page from the sidebar.
-2. Enter any URL in the input field and click **Analyze**.
-3. The result panel will display the detection verdict, attack type(s), severity level, confidence score, matched pattern, and HTTP response code.
-4. Click **Get AI Explanation** to generate a natural-language description of the attack.
-
-### Uploading a PCAP File
-
-1. Navigate to the **PCAP Analysis** page.
-2. Click **Upload File** and select a `.pcap` or `.txt` file containing HTTP traffic.
-3. The system will extract URLs, analyze each one, and display a summary including total URLs processed, malicious detections, and attack-type breakdown.
-4. Previously uploaded files are rejected to prevent reprocessing.
-
-### Viewing the Dashboard
-
-The **Dashboard** page auto-loads statistics and recent detections on login. The Pie chart reflects real-time attack-type distribution from Firestore. The recent attacks table shows the five latest unique malicious URLs.
-
-### Exporting Data
-
-Navigate to the **Export** page, optionally select an attack type and severity filter, choose CSV or JSON format, and click **Export**. The file will download immediately.
+1. Log in with superuser credentials. The system automatically redirects to the Admin Dashboard at `/dashboard/admin/`.
+2. Navigate to **Breed Management** at `/breeds/manage/` to add, edit, or remove breed entries.
+3. Review the **Analytics Panel** at `/dashboard/analytics/` to monitor platform-wide scan distribution.
+4. Process the **Dataset Review Queue** at `/dashboard/dataset-review/` to validate or discard unvalidated scan images.
+5. Access the **Django Admin Panel** at `/admin/` for raw model-level data management.
 
 ---
 
 ## Future Enhancements
 
-- **Real-time URL Stream Monitoring** — Integrate with network taps or proxy servers (e.g., mitmproxy) to analyze live traffic streams without requiring manual PCAP uploads.
-- **Deep Learning Detection Model** — Replace the Logistic Regression classifier with a character-level CNN or LSTM architecture to improve detection of adversarially obfuscated payloads.
-- **API Rate Limiting and Abuse Prevention** — Implement per-user request quotas and IP-level rate limiting on the Flask backend to prevent denial-of-service scenarios.
-- **Email OTP Delivery** — Integrate a transactional email service (SendGrid, AWS SES) to deliver OTP codes to users' registered email addresses instead of logging them to the server console.
-- **SIEM Integration** — Add webhook or syslog output options so that detected attacks can be forwarded in real time to external SIEM platforms (Splunk, Elastic Security).
-- **Multi-Model Ensemble** — Implement model ensembling combining TF-IDF + Logistic Regression with a gradient-boosted tree (XGBoost) for improved precision on ambiguous URLs.
-- **Browser Extension** — Develop a Chrome or Firefox extension that submits the current page URL to the detection API before navigation, providing inline warnings to end users.
-- **Containerization** — Package the backend and frontend as Docker containers with a `docker-compose.yml` for reproducible one-command deployment.
-- **Role-Based Access Control** — Introduce admin and analyst roles with differentiated permissions for dataset generation, bulk export, and cross-user history access.
-- **Threat Intelligence Feed Integration** — Cross-reference analyzed URLs against public threat intelligence feeds (VirusTotal, URLhaus) to augment detection coverage beyond pattern-based methods.
+- **Expanded Breed Coverage** — Extend the classification model to support additional indigenous Indian breeds such as Ongole, Tharparkar, Kankrej, and Nili-Ravi Buffalo.
+- **Mobile Application** — Develop a React Native or Flutter mobile app enabling real-time camera-based breed scanning directly from the field.
+- **Model Retraining Pipeline** — Build an automated pipeline that uses admin-validated dataset images to periodically fine-tune the TensorFlow model and deploy the updated SavedModel without downtime.
+- **Multi-Language Support** — Add Hindi and regional language (Telugu, Tamil, Marathi) support using Django's internationalization framework to improve accessibility for rural farmers.
+- **RESTful API Layer** — Expose breed recognition as a JSON REST API using Django REST Framework, enabling third-party integrations with veterinary platforms and government livestock portals.
+- **PostgreSQL Migration** — Transition from SQLite to PostgreSQL for production-grade concurrency, indexing, and scalability.
+- **Cloud Deployment** — Containerize the application using Docker and deploy to AWS EC2, Google Cloud Run, or Heroku with Gunicorn and Nginx.
+- **Health Advisory Module** — Integrate a breed-specific advisory engine that recommends feeding schedules, vaccination timelines, and productivity benchmarks based on the identified breed.
+- **Geolocation Tagging** — Capture and store GPS coordinates with each scan to enable regional livestock distribution mapping and herd movement analytics.
+- **Advanced Analytics Dashboard** — Incorporate heatmaps, trend forecasting, and breed-level performance comparisons using a richer visualization library such as Plotly or D3.js.
 
 ---
 
 ## Contributing
 
-Contributions are welcome. Please follow the standard Git workflow:
+Contributions are welcome. Please follow the standard Git workflow outlined below.
 
-```bash
-# Fork the repository and clone your fork
-git clone https://github.com/<your-username>/Identification-of-url-based-attacks-on-IP-Data-React.git
-cd Identification-of-url-based-attacks-on-IP-Data-React
+1. **Fork** the repository on GitHub.
+2. **Clone** your fork locally:
+   ```bash
+   git clone https://github.com/your-username/CattleBreed2.git
+   cd CattleBreed2
+   ```
+3. **Create a feature branch** from `main`:
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+4. **Make your changes**, ensuring code quality and consistency with the existing codebase.
+5. **Commit** with a descriptive message:
+   ```bash
+   git add .
+   git commit -m "feat: add your feature description"
+   ```
+6. **Push** your branch to your fork:
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+7. **Open a Pull Request** against the `main` branch of the original repository with a clear description of the changes made and the problem solved.
 
-# Create a feature branch
-git checkout -b feature/your-feature-name
-
-# Make your changes and commit with a descriptive message
-git add .
-git commit -m "feat: add <description of change>"
-
-# Push to your fork
-git push origin feature/your-feature-name
-
-# Open a Pull Request against the main branch of the original repository
-```
-
-Please ensure that:
-- All new backend routes include the `@require_auth` decorator if they access user-scoped data.
-- New attack patterns added to `attack_detector.py` are accompanied by corresponding entries in `dataset_generator.py` and `dataset.csv`.
-- Frontend changes are tested across the Chrome and Firefox browsers at minimum.
-- Commit messages follow the [Conventional Commits](https://www.conventionalcommits.org/) specification.
+Please ensure that any new functionality is accompanied by appropriate test coverage and that all existing tests pass before submitting a pull request.
 
 ---
 
 ## License
 
+This project is licensed under the **MIT License**.
+
 ```
 MIT License
 
-Copyright (c) 2026
+Copyright (c) 2026 Harisai Parasa
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -454,11 +431,17 @@ SOFTWARE.
 
 ## Contact
 
+For questions, issues, or usage inquiries, please open a GitHub Issue on the repository.
+
+
+&nbsp;
+
 &nbsp;
 
 ## ***To acquire this project, please contact***
 
-**GitHub:** https://github.com/harisaigithub  
-**Email:** [harisaiparasa@gmail.com](mailto:harisaiparasa@gmail.com)  
+**GitHub:** https://github.com/harisaigithub
+
+**Email:** [harisaiparasa@gmail.com](mailto:harisaiparasa@gmail.com)
 
 For collaborations, customizations, or deployment support, feel free to reach out.
